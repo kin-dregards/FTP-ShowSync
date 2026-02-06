@@ -59,16 +59,16 @@ def ftp_sync(config):
 			this_dir = local_dir + '\\' + folder
 			if exists(this_dir):
 				log(f' - Found existing local folder: {this_dir}')
-				return(folder)
+				return(local_dir, folder)
 
 		# If still not exist, then make it in the first folder
 		if cfg_check("create_show_folder"):
-			os.mkdir(this_dir)
+			os.mkdir(cfg["local_dirs"][0] + '\\' + folder)
 			log(f' - Created new folder: {this_dir}')
-			return(folder)
+			return(cfg["local_dirs"][0], folder)
 
 		log(' - Failed to find matching local folder: /' + folder + ', skipping.')
-		return 0
+		return(cfg["local_dirs"][0], 0)
 
 	def check_folder(folder, saved_latest_modified):
 		try:
@@ -155,9 +155,6 @@ def ftp_sync(config):
 				this_dir = show_folder[0]
 				log(f'Checking folder [{show_folder[0]}]')
 				new_files, new_folders, status = check_folder(show_folder[0], saved_latest_modified)
-				#print('new_folders: ' + str(new_folders))
-				if new_files:
-					new_files.extend(new_files)
 
 				# Loop subfolders until no new_folders
 				while new_folders:
@@ -184,7 +181,7 @@ def ftp_sync(config):
 						show_folder_exists = 0
 					else:
 						# Check if the directory exists, otherwise make it
-						show_folder_exists = show_folder_check(show_folder[0])
+						local_dir, show_folder_exists = show_folder_check(show_folder[0])
 						if not show_folder_exists:
 							log(f' - No local folder [{show_folder[0]}] exists or created, skipping.')
 							continue
@@ -195,7 +192,7 @@ def ftp_sync(config):
 					for this_file in new_files:
 						count += 1
 						log(f' - New file: {this_file.split("/")[-1]}')
-						status = download_file(ftp, this_file, show_folder_exists, cfg["local_dirs"][0], count, max_count)
+						status = download_file(ftp, this_file, show_folder_exists, local_dir, count, max_count)
 
 						if status == 'ERROR':
 							return(status)
@@ -332,13 +329,13 @@ def download_file(ftp, file, show_folder, local_dir, count, max_count):
 						break
 
 				# If it finds a season folder, use that
-				if season_folder != '':
+				if season_folder:
+					log(f'   Found season folder {local_dir}\\{show_folder}\\{season_folder}')
 					local_loc = f'{local_dir}\\{show_folder}\\{season_folder}\\{filename}'
 					# Check episode doesn't already exist
 					if cfg_check("check_if_episode_exists_already"):
 						if check_episode_exists(file, show_folder, local_dir):
 							return
-
 				else:
 					# Put it in a new season folder
 					if cfg_check("create_season_folder") and s:
