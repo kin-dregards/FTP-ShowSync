@@ -109,7 +109,7 @@ def ftp_sync(config):
 					if cfg_check("min_file_size_mb") and size_mb < int(cfg["min_file_size_mb"]):
 						continue
 
-					log(f' - Added new file "{name}" ({size_mb} MB)')
+					log(f' - Added new FTP file "{name}" ({size_mb} MB)')
 					files.append(f'{folder}/{name} ({size_mb})')
 
 			except Exception as e:
@@ -147,13 +147,13 @@ def ftp_sync(config):
 					return new_latest_modified
 
 				if float(show_folder[1]['modify']) <= float(saved_latest_modified):
-					log(f'Folder [{show_folder[0]}] older than last check, finishing.')
+					log(f'FTP folder [{show_folder[0]}] older than last check, finishing.')
 					#print(f"{float(show_folder[1]['modify'])} <= {float(saved_latest_modified)}")
 					return new_latest_modified
 
 				# Check show folder first
 				this_dir = show_folder[0]
-				log(f'Checking folder [{show_folder[0]}]')
+				log(f'Checking FTP folder [{show_folder[0]}]')
 				new_files, new_folders, status = check_folder(show_folder[0], saved_latest_modified)
 
 				# Loop subfolders until no new_folders
@@ -179,6 +179,7 @@ def ftp_sync(config):
 					if cfg_check("no_folders"):
 						log(f' - cfg "no_folders" set, no local subfolders.')
 						show_folder_exists = 0
+						local_dir = cfg["local_dirs"][0]
 					else:
 						# Check if the directory exists, otherwise make it
 						local_dir, show_folder_exists = show_folder_check(show_folder[0])
@@ -231,7 +232,7 @@ def ftp_sync(config):
 					log(f'Disconnected.')
 				ftp = FTP(cfg["ftp_server"])
 				ftp.login(cfg["user"], cfg["password"])
-				log(f'------------ Connected to {cfg["ftp_server"]} [{section}] ------------ ')
+				log(f'============ Connected to {cfg["ftp_server"]} [{section}] ============ ')
 			else:
 				log(f'------------ Checking {cfg["ftp_server"]} [{section}] ------------ ')
 			last_ftp_server = cfg["ftp_server"]
@@ -252,7 +253,7 @@ def ftp_sync(config):
 			#print('153: new_latest_modified: ' + str(new_latest_modified))
 
 			# Save the latest_modified to the ini file
-			if str(new_latest_modified) != str(saved_latest_modified):
+			if new_latest_modified and str(new_latest_modified) != str(saved_latest_modified):
 				config[section]['latest_modified'] = str(new_latest_modified)
 				with open('config.ini', 'w') as configfile:
 					config.write(configfile)
@@ -293,7 +294,7 @@ def download_file(ftp, file, show_folder, local_dir, count, max_count):
 
 		# No folders for Movies
 		if cfg_check("no_folders"):
-			local_loc = local_dir
+			local_loc = local_dir + '\\' + filename
 
 		# Or for TV Shows / Anime
 		else:
@@ -330,7 +331,7 @@ def download_file(ftp, file, show_folder, local_dir, count, max_count):
 
 				# If it finds a season folder, use that
 				if season_folder:
-					log(f'   Found season folder {local_dir}\\{show_folder}\\{season_folder}')
+					log(f'   Found season {season_folder} local folder: {local_dir}\\{show_folder}\\{season_folder}')
 					local_loc = f'{local_dir}\\{show_folder}\\{season_folder}\\{filename}'
 					# Check episode doesn't already exist
 					if cfg_check("check_if_episode_exists_already"):
@@ -357,7 +358,7 @@ def download_file(ftp, file, show_folder, local_dir, count, max_count):
 		else:
 			file_size = str(file_size_mb) + 'MB'
 
-		download_text = f' ({count}/{max_count}) Downloading: {local_loc} ({file_size})'
+		download_text = f' - ({count}/{max_count}) Downloading: {local_loc} ({file_size})'
 		log(download_text)
 
 		# Download bar

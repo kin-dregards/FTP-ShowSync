@@ -1,0 +1,45 @@
+[Config]
+delay_m = 30
+only_log_downloads = 0
+
+[TV Shows example]
+enabled = 1
+ftp_server = example.com
+port = 21
+user = username
+password = password
+remote_dir = /files/completed/TV Shows
+local_dirs = D:\TV Shows,I:\TV Shows2
+latest_modified = 0
+create_show_folder = 1
+create_season_folder = 1
+filetypes = mkv,mp4
+check_if_episode_exists_already = 1
+overwrite_if_new_contains = 6CH
+
+[Anime example]
+enabled = 1
+ftp_server = example.com
+port = 21
+user = username
+password = password
+remote_dir = /files/completed/Anime
+local_dirs = D:\Anime,I:\Anime
+latest_modified = 0
+create_show_folder = 0
+create_season_folder = 1
+filetypes = mkv,mp4
+check_if_episode_exists_already = 1
+
+[Movies example]
+enabled = 1
+ftp_server = example.com
+port = 21
+user = username
+password = password
+remote_dir = /files/completed/Movies
+local_dirs = F:\Movies,I:\Movies2
+latest_modified = 0
+filetypes = mkv,mp4
+min_file_size_mb = 4000
+no_folders = 1
