@@ -136,39 +136,48 @@ def ftp_sync(config):
 					new_latest_modified = show_folder[1]['modify']
 					if str(new_latest_modified) != str(saved_latest_modified):
 						log('Got new latest modified time: ' + str(new_latest_modified))
-
 				# If no saved time then get the latest modified time and return
 				if int(saved_latest_modified) == 0:
 					log('Got initial latest time: ' + str(new_latest_modified))
 					return new_latest_modified
-
 				# If negative then only check that number of folders then break and have newest time
 				if int(saved_latest_modified) < 0 and count == int(str(saved_latest_modified.replace('-',''))):
 					return new_latest_modified
-
 				if float(show_folder[1]['modify']) <= float(saved_latest_modified):
 					log(f'FTP folder [{show_folder[0]}] older than last check, finishing.')
 					#print(f"{float(show_folder[1]['modify'])} <= {float(saved_latest_modified)}")
 					return new_latest_modified
 
-				# Check show folder first
-				this_dir = show_folder[0]
-				log(f'Checking FTP folder [{show_folder[0]}]')
-				new_files, new_folders, status = check_folder(show_folder[0], saved_latest_modified)
+				# If it's a file
+				if show_folder[1]['type'] != 'dir':
+					if cfg_check("no_folders"):
+						name = show_folder[0]
+						size = int(show_folder[1]['size'])
+						size_mb = round(size / (1024 * 1024))
+						log(f' - Added new FTP file "{name}" ({size_mb} MB)')
+						new_files.append(f'{name} ({size_mb})')
 
-				# Loop subfolders until no new_folders
-				while new_folders:
-					subfolders = new_folders
-					new_folders = []
-					if status in ['break', 'ERROR']:
-						break
-					for subfolder in subfolders:
-						log(f' - Checking subfolder [{subfolder}]')
-						found_files, found_folders, status = check_folder(subfolder, saved_latest_modified)
-						if found_files:
-							new_files.extend(found_files)
-						if found_folders:
-							new_folders.extend(found_folders)
+				# Otherwise if it's a folder
+				if show_folder[1]['type'] == 'dir':
+
+					# Check show folder 
+					this_dir = show_folder[0]
+					log(f'Checking FTP folder [{show_folder[0]}]')
+					new_files, new_folders, status = check_folder(show_folder[0], saved_latest_modified)
+
+					# Loop subfolders until no new_folders
+					while new_folders:
+						subfolders = new_folders
+						new_folders = []
+						if status in ['break', 'ERROR']:
+							break
+						for subfolder in subfolders:
+							log(f' - Checking subfolder [{subfolder}]')
+							found_files, found_folders, status = check_folder(subfolder, saved_latest_modified)
+							if found_files:
+								new_files.extend(found_files)
+							if found_folders:
+								new_folders.extend(found_folders)
 
 				# Download new files
 				if new_files:
