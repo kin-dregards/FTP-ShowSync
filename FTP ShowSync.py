@@ -51,7 +51,6 @@ def log_end(text, end):
 
 # WHEN IT SYNCS
 def ftp_sync(config):
-	global saved_latest_modified
 
 	def show_folder_check(folder):
 		# Check each local dir for folder
@@ -78,29 +77,33 @@ def ftp_sync(config):
 			log(traceback.format_exc())
 			return [], []
 
-		contents.sort(key=lambda e: e[1].get('modify', ''), reverse=True)
+		contents.sort(key=lambda e: e[1]['modify'], reverse=True)
 		files = []
 		folders = []
 		status = ''
 
 		for name, facts in contents:
 			try:
-				modify = facts.get('modify')
-				if modify and modify <= saved_latest_modified:
-					log(f' - "{name}" older than saved time ({modify} <= {saved_latest_modified}), breaking')
-					status = 'break'
-					break
-
 				entry_type = facts.get('type')
+				modify = facts.get('modify')
+
+				if modify and modify <= saved_latest_modified:
+					if entry_type == 'file':
+						log(f' - "{name}" older than saved time ({modify} <= {saved_latest_modified}), skip file')
+						#continue
+					log(f' - "{name}" older than saved time ({modify} <= {saved_latest_modified}), breaking')
+					#status = 'break'
+					break
 
 				# Directories
 				if entry_type == 'dir':
 					folders.append(f'{folder}/{name}')
+					#log(f' - Append: "{folder}/{name}"')
 					continue
 
 				# Files
 				if entry_type == 'file':
-					if cfg["filetypes"] and not any(name.lower().endswith(ft) for ft in cfg["filetypes"]):
+					if cfg_check('filetypes') and not any(name.lower().endswith(ft) for ft in cfg["filetypes"]):
 						continue
 
 					size_bytes = int(facts.get('size', 0))
@@ -144,8 +147,8 @@ def ftp_sync(config):
 				if int(saved_latest_modified) < 0 and count == int(str(saved_latest_modified.replace('-',''))):
 					return new_latest_modified
 				if float(show_folder[1]['modify']) <= float(saved_latest_modified):
-					log(f'FTP folder [{show_folder[0]}] older than last check, finishing.')
 					#print(f"{float(show_folder[1]['modify'])} <= {float(saved_latest_modified)}")
+					log(f'FTP folder [{show_folder[0]}] older than last check, finishing.')
 					return new_latest_modified
 
 				# If it's a file
@@ -169,8 +172,6 @@ def ftp_sync(config):
 					while new_folders:
 						subfolders = new_folders
 						new_folders = []
-						if status in ['break', 'ERROR']:
-							break
 						for subfolder in subfolders:
 							log(f' - Checking subfolder [{subfolder}]')
 							found_files, found_folders, status = check_folder(subfolder, saved_latest_modified)
@@ -254,7 +255,7 @@ def ftp_sync(config):
 
 
 			# get parent and child folders in directory
-			new_latest_modified = check_for_new_files(cfg["remote_dir"], saved_latest_modified, new_latest_modified, count)
+			new_latest_modified = check_for_new_files(cfg["remote_dir"], cfg["latest_modified"], new_latest_modified, count)
 
 			if new_latest_modified == 'ERROR':
 				return('ERROR')
@@ -477,17 +478,20 @@ def get_season_episode(this_filename):
 
 	try:
 		# Regex to get season and episode
-		matches = re.findall(r"([Ss]?)(\d{1,2})([xXeE\.\-])(\d{1,2})", this_filename, re.I)[0]
-		file_season = matches[1]
-		file_episode = matches[3]
+		matches = re.findall(r"[Ss](\d{1,2})[Ee](\d{1,2})", this_filename, re.I)[0]
+		file_season = matches[0]
+		file_episode = matches[1]
 	except:
 		pass
 
 	# If it failed to get them then default to Season 1 and get episode number
-	if file_season == 0 or file_episode == 0:
+	if not file_season and not file_episode:
 		file_season = '01'
 		ep_match = re.findall(r'(\d{1,3})', this_filename)
-		file_episode = ep_match[1] if ep_match else 0
+		if ep_match:
+			file_episode = ep_match[0]
+		else:
+			file_episode = 0
 
 	return(file_season, file_episode)
 
